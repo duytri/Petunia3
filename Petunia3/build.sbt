@@ -14,6 +14,8 @@ libraryDependencies ++= Seq(
 )
 
 unmanagedBase <<= baseDirectory { base => base / "libs" }
+unmanagedResourceDirectories in Compile += baseDirectory.value / "src" / "main"
+excludeFilter in unmanagedResourceDirectories := "*.scala"
 
 scalacOptions += "-deprecation"
 assemblyJarName in assembly := name.value+"-"+version.value+".jar"

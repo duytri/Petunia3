@@ -17,16 +17,18 @@ import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.mllib.classification.SVMWithSGD
 import org.apache.spark.mllib.classification.SVMModel
+import org.apache.spark.mllib.evaluation.binary.FMeasure
 
 object Petunia extends SimpleSwingApplication {
   def top = new MainFrame {
     resizable = false
     title = "Chương trình phân lớp văn bản theo chủ đề"
-    iconImage = toolkit.getImage("./img/logo.png")
+    val iconURL = getClass.getResource("/img/logo.png")
+    iconImage = toolkit.createImage(iconURL)
 
     //~~~~~~~~~~~ Title ~~~~~~~~~~~
     val icon = new Label {
-      icon = new ImageIcon("./img/logo.png")
+      icon = new ImageIcon(iconURL)
     }
     val lbTitle = new Label {
       text = " CHƯƠNG TRÌNH PHÂN LỚP VĂN BẢN THEO CHỦ ĐỀ"
@@ -247,7 +249,7 @@ object Petunia extends SimpleSwingApplication {
         val bcModelSaveDir = sc.broadcast(tfModelDir.text)
         val bcTrainRate = sc.broadcast(tfTrainPercent.text.toDouble)
 
-        lbStatus.text = "Đã phân tán các thông số đầu vào"
+        //lbStatus.text = "Đã phân tán các thông số đầu vào"
 
         //~~~~~~~~~~Get all data directories~~~~~~~~~~
         val inputDirPath = bcTrainDir.value + "input"
@@ -269,7 +271,7 @@ object Petunia extends SimpleSwingApplication {
           PUtils.statWords(fileDir)
         })
 
-        lbStatus.text = "Đã thu thập và phân tán dữ liệu! Tính TF*IDF..."
+        //lbStatus.text = "Đã thu thập và phân tán dữ liệu! Tính TF*IDF..."
 
         //~~~~~~~~~~Calculate TFIDF~~~~~~~~~~
         var tfidfWordSet0: RDD[Map[String, Double]] = sc.emptyRDD[Map[String, Double]] // Map[word, TF*IDF-value]
@@ -287,7 +289,7 @@ object Petunia extends SimpleSwingApplication {
         }))
         tfidfWordSet0.cache
         tfidfWordSet1.cache
-        lbStatus.text = "Đã tính xong TF*IDF cho tập dữ liệu! Loại bỏ stopwords..."
+        //lbStatus.text = "Đã tính xong TF*IDF cho tập dữ liệu! Loại bỏ stopwords..."
 
         //~~~~~~~~~~Remove stopwords~~~~~~~~~~
         //// Load stopwords from file
@@ -300,7 +302,7 @@ object Petunia extends SimpleSwingApplication {
         tfidfWordSet0.foreach(oneFile => oneFile --= bcStopwords.value)
         tfidfWordSet1.foreach(oneFile => oneFile --= bcStopwords.value)
 
-        lbStatus.text = "Đã loại bỏ stopwords! Tiếp tục xử lý tập từ..."
+        //lbStatus.text = "Đã loại bỏ stopwords! Tiếp tục xử lý tập từ..."
 
         //~~~~~~~~~~Normalize by TFIDF~~~~~~~~~~
         val lowerUpperBound = (bcLowerBound.value, bcUpperBound.value)
@@ -313,7 +315,7 @@ object Petunia extends SimpleSwingApplication {
           oneFile.filter(x => x._2 > lowerUpperBound._1 && x._2 < lowerUpperBound._2).keySet
         }))
 
-        lbStatus.text = "Tạo vector..."
+        //lbStatus.text = "Tạo vector..."
 
         //~~~~~~~~~~Create vector~~~~~~~~~~
         var vectorWords: RDD[LabeledPoint] = sc.emptyRDD[LabeledPoint]
@@ -343,7 +345,7 @@ object Petunia extends SimpleSwingApplication {
         }))
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        lbStatus.text = "Đang huấn luyện..."
+        //lbStatus.text = "Đang huấn luyện..."
         val splits = vectorWords.randomSplit(Array(0.7, 0.3), seed = 11L)
         val training = splits(0).cache()
         val test = splits(1)
@@ -353,6 +355,7 @@ object Petunia extends SimpleSwingApplication {
 
         // Clear the default threshold.
         model.clearThreshold()
+        model.setThreshold(0.5)
 
         //Compute raw scores on the test set.
         val scoreAndLabels = test.map { point =>
@@ -361,27 +364,29 @@ object Petunia extends SimpleSwingApplication {
         }
 
         val metrics = new BinaryClassificationMetrics(scoreAndLabels)
-        val auPR = metrics.areaUnderPR
+        //val auPR = metrics.areaUnderPR
 
-        /*val precision = metrics.precisionByThreshold.collect.toMap[Double, Double]
+        val precision = metrics.precisionByThreshold.collect.toMap[Double, Double]
         val recall = metrics.recallByThreshold.collect.toMap[Double, Double]
         val fMeasure = metrics.fMeasureByThreshold.collect.toMap[Double, Double]
-        println("Threshold\t\tPrecision\t\tRecall\t\tF-Measure")
-        precision.foreach(x => {
-          println(x._1 + "\t\t" + x._2 + "\t\t" + recall.get(x._1).get + "\t\t" + fMeasure.get(x._1).get)
-        })*/
 
-        lbStatus.text = "Lưu mô hình"
+        //lbStatus.text = "Lưu mô hình"
         model.save(sc, bcModelSaveDir.value) //save in "myDir+data" may cause error
 
-        lbStatus.text = "Area under PR-Curve = " + auPR
+        //lbStatus.text = "Area under PR-Curve = " + auPR
 
         tfTestLink.enabled = true
         btnTest.enabled = true
-        //lbStatus.text = "Huấn luyện hoàn thành! Sẵn sàng để kiểm thử."
+        lbStatus.text = "Huấn luyện hoàn thành! Sẵn sàng để kiểm thử."
+        Dialog.showMessage(contents.head,
+          "Quá trình huấn luyện hoàn tất!\nKết quả:\n - Precision: " + precision.get(0.5).get + "\n - Recall: " + recall.get(0.5).get + "\n - F-measure: " + fMeasure.get(0.5).get,
+          messageType = Dialog.Message.Info,
+          title = title)
       }
       case ButtonClicked(`btnTest`) =>
-        val sameModel = SVMModel.load(sc, tfModelDir.text)
+        val testModel = SVMModel.load(sc, tfModelDir.text)
+        testModel.clearThreshold()
+        testModel.setThreshold(0.5)
 
         lbStatus.text = "Kiểm thử..."
         val testWords = PUtils.statWords(tfTestLink.text) //Load word set
@@ -409,7 +414,11 @@ object Petunia extends SimpleSwingApplication {
           }
         }
         //Test
-        lbStatus.text = "Kết quả: " + sameModel.predict(Vectors.dense(testVector.toArray))
+        lbStatus.text = "Kiểm thử hoàn tất!"
+        Dialog.showMessage(contents.head,
+          "Quá trình kiểm thử  hoàn tất!\nKết quả: " + testModel.predict(Vectors.dense(testVector.toArray)),
+          messageType = Dialog.Message.Info,
+          title = title)
     }
     //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   }
