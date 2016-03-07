@@ -252,12 +252,15 @@ object Petunia extends SimpleSwingApplication {
         //lbStatus.text = "Đã phân tán các thông số đầu vào"
 
         //~~~~~~~~~~Get all data directories~~~~~~~~~~
-        val inputDirPath = bcTrainDir.value + "input"
+        val inputDirPath = tfTrainDir.text + "input"
         val input = (inputDirPath + File.separator + "0", inputDirPath + File.separator + "1")
+        println(input._1+"\n"+input._2)
+        val bcInput1 = sc.broadcast(PUtils.getListOfSubFiles((new File(input._1))))
+        val bcInput2 = sc.broadcast(PUtils.getListOfSubFiles((new File(input._2))))
 
         //~~~~~~~~~~Get all input files~~~~~~~~~~
-        val listFiles0 = sc.parallelize(PUtils.getListOfSubFiles((new File(input._1))))
-        val listFiles1 = sc.parallelize(PUtils.getListOfSubFiles((new File(input._2))))
+        val listFiles0 = sc.parallelize(bcInput1.value)
+        val listFiles1 = sc.parallelize(bcInput2.value)
 
         var wordSetByFile0: RDD[Map[String, Int]] = sc.emptyRDD[Map[String, Int]]
         //Foreach text file
