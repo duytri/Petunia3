@@ -37,7 +37,7 @@ object PUtils {
     addOrIgnore(wordsTmpArr)
   }
 
-  def statTFIDF(doc: Map[String, Int], allDocs: ArrayBuffer[Map[String, Int]]): Map[String, Double] = {
+  def statTFIDF(doc: Map[String, Int], allDocs: Array[Map[String, Int]]): Map[String, Double] = {
     var tfidfOneDoc = Map[String, Double]()
     doc.foreach(oneWord => {
       tfidfOneDoc += oneWord._1 -> TFIDFCalc.tfIdf(oneWord, doc, allDocs)

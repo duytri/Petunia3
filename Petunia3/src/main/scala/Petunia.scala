@@ -276,12 +276,28 @@ object Petunia extends SimpleSwingApplication {
 
         //lbStatus.text = "Đã thu thập và phân tán dữ liệu! Tính TF*IDF..."
 
+        //~~~~~~~~~~Remove stopwords~~~~~~~~~~
+        //// Load stopwords from file
+        val stopwordFilePath = bcTrainDir.value + "libs/vietnamese-stopwords.txt"
+        val swSource = Source.fromFile(stopwordFilePath)
+        swSource.getLines.foreach { x => arrStopwords.append(x) }
+        swSource.close
+        val bcStopwords = sc.broadcast(arrStopwords)
+        //// Foreach document, remove stopwords
+        wordSetByFile0.foreach(oneFile => oneFile --= bcStopwords.value)
+        wordSetByFile1.foreach(oneFile => oneFile --= bcStopwords.value)
+        //wordSet0.appendAll(wordSetByFile0.collect)
+        //wordSet1.appendAll(wordSetByFile1.collect)
+        //val bcWordSet0 = sc.broadcast(wordSet0)
+        //val bcWordSet1 = sc.broadcast(wordSet1)
+        val bcWordSet0 = sc.broadcast(wordSetByFile0.collect)
+        val bcWordSet1 = sc.broadcast(wordSetByFile1.collect)
+
+        //lbStatus.text = "Đã loại bỏ stopwords! Tiếp tục xử lý tập từ..."
+
         //~~~~~~~~~~Calculate TFIDF~~~~~~~~~~
         var tfidfWordSet0: RDD[Map[String, Double]] = sc.emptyRDD[Map[String, Double]] // Map[word, TF*IDF-value]
-        wordSet0.appendAll(wordSetByFile0.collect)
-        wordSet1.appendAll(wordSetByFile1.collect)
-        val bcWordSet0 = sc.broadcast(wordSet0)
-        val bcWordSet1 = sc.broadcast(wordSet1)
+        
         tfidfWordSet0 = tfidfWordSet0.union(wordSetByFile0.map(oneFile => {
           PUtils.statTFIDF(oneFile, bcWordSet0.value)
         }))
@@ -293,19 +309,6 @@ object Petunia extends SimpleSwingApplication {
         tfidfWordSet0.cache
         tfidfWordSet1.cache
         //lbStatus.text = "Đã tính xong TF*IDF cho tập dữ liệu! Loại bỏ stopwords..."
-
-        //~~~~~~~~~~Remove stopwords~~~~~~~~~~
-        //// Load stopwords from file
-        val stopwordFilePath = bcTrainDir.value + "libs/vietnamese-stopwords.txt"
-        val swSource = Source.fromFile(stopwordFilePath)
-        swSource.getLines.foreach { x => arrStopwords.append(x) }
-        swSource.close
-        val bcStopwords = sc.broadcast(arrStopwords)
-        //// Foreach document, remove stopwords
-        tfidfWordSet0.foreach(oneFile => oneFile --= bcStopwords.value)
-        tfidfWordSet1.foreach(oneFile => oneFile --= bcStopwords.value)
-
-        //lbStatus.text = "Đã loại bỏ stopwords! Tiếp tục xử lý tập từ..."
 
         //~~~~~~~~~~Normalize by TFIDF~~~~~~~~~~
         val lowerUpperBound = (bcLowerBound.value, bcUpperBound.value)
