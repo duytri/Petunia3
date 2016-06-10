@@ -254,7 +254,7 @@ object Petunia extends SimpleSwingApplication {
         //~~~~~~~~~~Get all data directories~~~~~~~~~~
         val inputDirPath = tfTrainDir.text + "input"
         val input = (inputDirPath + File.separator + "0", inputDirPath + File.separator + "1")
-        println(input._1+"\n"+input._2)
+        println(input._1 + "\n" + input._2)
         val bcInput1 = sc.broadcast(PUtils.getListOfSubFiles((new File(input._1))))
         val bcInput2 = sc.broadcast(PUtils.getListOfSubFiles((new File(input._2))))
 
@@ -297,7 +297,7 @@ object Petunia extends SimpleSwingApplication {
 
         //~~~~~~~~~~Calculate TFIDF~~~~~~~~~~
         var tfidfWordSet0: RDD[Map[String, Double]] = sc.emptyRDD[Map[String, Double]] // Map[word, TF*IDF-value]
-        
+
         tfidfWordSet0 = tfidfWordSet0.union(wordSetByFile0.map(oneFile => {
           PUtils.statTFIDF(oneFile, bcWordSet0.value)
         }))
@@ -361,7 +361,7 @@ object Petunia extends SimpleSwingApplication {
 
         // Clear the default threshold.
         model.clearThreshold()
-        model.setThreshold(0.5)
+        //model.setThreshold(0.5)
 
         //Compute raw scores on the test set.
         val scoreAndLabels = test.map { point =>
@@ -375,6 +375,10 @@ object Petunia extends SimpleSwingApplication {
         val precision = metrics.precisionByThreshold.collect.toMap[Double, Double]
         val recall = metrics.recallByThreshold.collect.toMap[Double, Double]
         val fMeasure = metrics.fMeasureByThreshold.collect.toMap[Double, Double]
+        println("Threshold,Precision,Recall,F-Measure")
+        precision.foreach(x => {
+          println(x._1 + "," + x._2 + "," + recall.get(x._1).get + "," + fMeasure.get(x._1).get)
+        })
 
         //lbStatus.text = "Lưu mô hình"
         model.save(sc, bcModelSaveDir.value) //save in "myDir+data" may cause error
