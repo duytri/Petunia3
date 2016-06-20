@@ -352,7 +352,7 @@ object Petunia extends SimpleSwingApplication {
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         //lbStatus.text = "Đang huấn luyện..."
-        val splits = vectorWords.randomSplit(Array(0.7, 0.3), seed = 11L)
+        val splits = vectorWords.randomSplit(Array(bcTrainRate.value, 1 - bcTrainRate.value), seed = 11L)
         val training = splits(0).cache()
         val test = splits(1)
 

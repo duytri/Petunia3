@@ -19,7 +19,7 @@ excludeFilter in unmanagedResourceDirectories := "*.scala"
 
 scalacOptions += "-deprecation"
 assemblyJarName in assembly := name.value+"-"+version.value+".jar"
-mainClass in assembly := Some("main.scala.PetuniaMain")
+mainClass in assembly := Some("main.scala.Petunia")
 test in assembly := {}
 
 assemblyMergeStrategy in assembly := {
